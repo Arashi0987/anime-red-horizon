@@ -18,7 +18,7 @@ let db;
 async function initializeDatabase() {
   // Replace 'your-anime-database.db' with the path to your actual .db file
   db = await open({
-    filename: './your-anime-database.db',
+    filename: '/home/arashi/anime_app/instance/anime_list.db',
     driver: sqlite3.Database
   });
   
