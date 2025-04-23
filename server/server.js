@@ -3,12 +3,18 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const { open } = require('sqlite');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS
-app.use(cors());
+// Enable CORS with more comprehensive configuration
+app.use(cors({
+  origin: '*', // Allow all origins during development
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+  optionsSuccessStatus: 204
+}));
 app.use(express.json());
 
 // Database connection
@@ -16,13 +22,44 @@ let db;
 
 // Initialize database connection
 async function initializeDatabase() {
-  // Replace 'your-anime-database.db' with the path to your actual .db file
-  db = await open({
-    filename: '/home/arashi/anime_app/instance/anime_list.db',
-    driver: sqlite3.Database
-  });
-  
-  console.log('Connected to SQLite database');
+  try {
+    // Use path.join for proper cross-platform path handling
+    // We'll look for the database file in the current directory, the instance directory,
+    // and one level up in the instance directory
+    const possiblePaths = [
+      path.join(__dirname, 'anime_list.db'),
+      path.join(__dirname, 'instance', 'anime_list.db'),
+      path.join(__dirname, '..', 'instance', 'anime_list.db')
+    ];
+    
+    let dbPath = '';
+    
+    // Try to find the database file
+    for (const p of possiblePaths) {
+      try {
+        require('fs').accessSync(p);
+        dbPath = p;
+        console.log(`Database found at: ${dbPath}`);
+        break;
+      } catch (err) {
+        console.log(`No database at: ${p}`);
+      }
+    }
+    
+    if (!dbPath) {
+      throw new Error('Database file not found in any of the expected locations');
+    }
+    
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+    
+    console.log('Connected to SQLite database');
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    throw error;
+  }
 }
 
 // API Routes
@@ -93,11 +130,16 @@ app.get('/api/soundtracks', async (req, res) => {
   }
 });
 
+// Add a simple health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
+});
+
 // Initialize database and start server
 initializeDatabase()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => { // Use '0.0.0.0' to listen on all network interfaces
+      console.log(`Server running on port ${PORT} and accessible at http://localhost:${PORT}`);
     });
   })
   .catch(err => {

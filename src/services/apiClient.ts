@@ -1,7 +1,23 @@
 
 import { AnimeShow, SoundtrackInfo } from "@/types/anime";
 
-const API_URL = "http://localhost:5000/api";
+// Determine the API URL dynamically based on deployment environment
+const getApiUrl = () => {
+  // Get the current hostname - works in both development and production
+  const hostname = window.location.hostname;
+  
+  // If we're in a development environment running on localhost/127.0.0.1
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return "http://localhost:5000/api";
+  } 
+  // If we're running from another machine in the network (accessing via hostname like 'panther')
+  else {
+    // Use the same hostname but different port for the API
+    return `http://${hostname}:5000/api`;
+  }
+};
+
+const API_URL = getApiUrl();
 
 // This client can be used with the Express server (see server/server.js)
 // It provides methods to fetch data from your actual SQLite database
@@ -9,9 +25,10 @@ export class ApiClient {
   // Get all anime shows
   static async getAnimeList(): Promise<AnimeShow[]> {
     try {
+      console.log(`Fetching anime list from: ${API_URL}/anime`);
       const response = await fetch(`${API_URL}/anime`);
       if (!response.ok) {
-        throw new Error("Failed to fetch anime list");
+        throw new Error(`Failed to fetch anime list: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
@@ -25,9 +42,10 @@ export class ApiClient {
   // Get anime by ID
   static async getAnimeById(id: number): Promise<AnimeShow | undefined> {
     try {
+      console.log(`Fetching anime with ID ${id} from: ${API_URL}/anime/${id}`);
       const response = await fetch(`${API_URL}/anime/${id}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch anime with ID ${id}`);
+        throw new Error(`Failed to fetch anime with ID ${id}: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
@@ -43,9 +61,10 @@ export class ApiClient {
     if (!query) return this.getAnimeList();
     
     try {
+      console.log(`Searching anime with query "${query}" from: ${API_URL}/anime/search/${encodeURIComponent(query)}`);
       const response = await fetch(`${API_URL}/anime/search/${encodeURIComponent(query)}`);
       if (!response.ok) {
-        throw new Error("Failed to search anime");
+        throw new Error(`Failed to search anime: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
@@ -64,9 +83,10 @@ export class ApiClient {
   // Get anime with soundtrack info
   static async getAnimeWithSoundtrack(id: number): Promise<AnimeShow & { soundtrack_info?: SoundtrackInfo }> {
     try {
+      console.log(`Fetching anime with soundtrack info for ID ${id} from: ${API_URL}/anime/${id}`);
       const response = await fetch(`${API_URL}/anime/${id}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch anime with ID ${id}`);
+        throw new Error(`Failed to fetch anime with ID ${id}: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
