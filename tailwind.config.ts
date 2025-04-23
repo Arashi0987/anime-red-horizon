@@ -52,6 +52,13 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				anime: {
+					red: '#ea384c',
+					dark: '#1A1F2C',
+					darker: '#161A24',
+					gray: '#2A2E39',
+					light: '#F0F0F0'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

@@ -1,0 +1,250 @@
+
+import { AnimeShow, SoundtrackInfo } from "@/types/anime";
+
+const API_URL = "http://localhost:5000/api";
+
+// This client can be used with the Express server (see server/server.js)
+// It provides methods to fetch data from your actual SQLite database
+export class ApiClient {
+  // Get all anime shows
+  static async getAnimeList(): Promise<AnimeShow[]> {
+    try {
+      const response = await fetch(`${API_URL}/anime`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch anime list");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching anime list:", error);
+      
+      // Return sample data for development/fallback
+      return this.getSampleAnimeList();
+    }
+  }
+
+  // Get anime by ID
+  static async getAnimeById(id: number): Promise<AnimeShow | undefined> {
+    try {
+      const response = await fetch(`${API_URL}/anime/${id}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch anime with ID ${id}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching anime with ID ${id}:`, error);
+      
+      // Return sample data for development/fallback
+      return this.getSampleAnimeList().find(anime => anime.id === id);
+    }
+  }
+
+  // Search anime by name
+  static async searchAnime(query: string): Promise<AnimeShow[]> {
+    if (!query) return this.getAnimeList();
+    
+    try {
+      const response = await fetch(`${API_URL}/anime/search/${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error("Failed to search anime");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error searching anime:", error);
+      
+      // Return filtered sample data for development/fallback
+      const lowercaseQuery = query.toLowerCase();
+      return this.getSampleAnimeList().filter(
+        anime => 
+          (anime.english_name && anime.english_name.toLowerCase().includes(lowercaseQuery)) || 
+          (anime.romanji_name && anime.romanji_name.toLowerCase().includes(lowercaseQuery))
+      );
+    }
+  }
+
+  // Get anime with soundtrack info
+  static async getAnimeWithSoundtrack(id: number): Promise<AnimeShow & { soundtrack_info?: SoundtrackInfo }> {
+    try {
+      const response = await fetch(`${API_URL}/anime/${id}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch anime with ID ${id}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching anime with ID ${id}:`, error);
+      
+      // Return sample data for development/fallback
+      const anime = this.getSampleAnimeList().find(anime => anime.id === id);
+      if (!anime) {
+        throw new Error(`Anime with ID ${id} not found`);
+      }
+      
+      const soundtrack = anime.soundtrack_path 
+        ? this.getSampleSoundtracks().find(s => s.soundtrack_path === anime.soundtrack_path)
+        : undefined;
+      
+      return {
+        ...anime,
+        soundtrack_info: soundtrack,
+      };
+    }
+  }
+
+  // Sample data for development/fallback
+  private static getSampleAnimeList(): AnimeShow[] {
+    return [
+      {
+        id: 1535,
+        english_name: "Death Note",
+        romanji_name: "Desu Nōto",
+        year: 2006,
+        num_seasons: 1,
+        is_dubbed: true,
+        show_path: "/anime/Death Note",
+        season_path: "/anime/Death Note/Season 1",
+        soundtrack_path: "/soundtracks/Death Note",
+        sonarr_id: 12345,
+        sonarr_monitor_status: true,
+        season_number: 1,
+        episodes: 37,
+        episodes_dl: 37,
+        anilist_progress: 37,
+        release_status: "Completed",
+      },
+      {
+        id: 101922,
+        english_name: "Demon Slayer",
+        romanji_name: "Kimetsu no Yaiba",
+        year: 2019,
+        num_seasons: 3,
+        is_dubbed: true,
+        show_path: "/anime/Demon Slayer",
+        season_path: "/anime/Demon Slayer/Season 1",
+        soundtrack_path: "/soundtracks/Demon Slayer",
+        sonarr_id: 23456,
+        sonarr_monitor_status: true,
+        season_number: 1,
+        episodes: 26,
+        episodes_dl: 26,
+        anilist_progress: 26,
+        release_status: "Ongoing",
+      },
+      {
+        id: 20605,
+        english_name: "My Hero Academia",
+        romanji_name: "Boku no Hero Academia",
+        year: 2016,
+        num_seasons: 6,
+        is_dubbed: true,
+        show_path: "/anime/My Hero Academia",
+        season_path: "/anime/My Hero Academia/Season 1",
+        soundtrack_path: "/soundtracks/My Hero Academia",
+        sonarr_id: 34567,
+        sonarr_monitor_status: true,
+        season_number: 1,
+        episodes: 13,
+        episodes_dl: 13,
+        anilist_progress: 13,
+        release_status: "Ongoing",
+      },
+      {
+        id: 21459,
+        english_name: "Attack on Titan",
+        romanji_name: "Shingeki no Kyojin",
+        year: 2013,
+        num_seasons: 4,
+        is_dubbed: true,
+        show_path: "/anime/Attack on Titan",
+        season_path: "/anime/Attack on Titan/Season 1",
+        soundtrack_path: "/soundtracks/Attack on Titan",
+        sonarr_id: 45678,
+        sonarr_monitor_status: true,
+        season_number: 1,
+        episodes: 25,
+        episodes_dl: 25,
+        anilist_progress: 25,
+        release_status: "Completed",
+      },
+      {
+        id: 20958,
+        english_name: "One Punch Man",
+        romanji_name: "Wanpanman",
+        year: 2015,
+        num_seasons: 2,
+        is_dubbed: true,
+        show_path: "/anime/One Punch Man",
+        season_path: "/anime/One Punch Man/Season 1",
+        soundtrack_path: "/soundtracks/One Punch Man",
+        sonarr_id: 56789,
+        sonarr_monitor_status: true,
+        season_number: 1,
+        episodes: 12,
+        episodes_dl: 12,
+        anilist_progress: 12,
+        release_status: "Ongoing",
+      },
+    ];
+  }
+
+  private static getSampleSoundtracks(): SoundtrackInfo[] {
+    return [
+      {
+        soundtrack_path: "/soundtracks/Death Note",
+        albums_count: 3,
+        albums_missing: 0,
+        lossless: "Yes",
+        album_list: "OST Vol.1, OST Vol.2, Character Themes",
+        file_formats: "FLAC",
+        download_status: "Complete",
+      },
+      {
+        soundtrack_path: "/soundtracks/Demon Slayer",
+        albums_count: 4,
+        albums_missing: 1,
+        lossless: "Partial",
+        album_list: "OST Vol.1, OST Vol.2, Character Themes, Movie OST",
+        file_formats: "FLAC, MP3",
+        download_status: "Partial",
+      },
+      {
+        soundtrack_path: "/soundtracks/My Hero Academia",
+        albums_count: 6,
+        albums_missing: 2,
+        lossless: "Partial",
+        album_list: "Season 1 OST, Season 2 OST, Season 3 OST, Season 4 OST",
+        file_formats: "FLAC, MP3",
+        download_status: "Partial",
+      },
+    ];
+  }
+}
+
+// This function fetches cover art from Anilist based on the ID
+export async function getAnilistCoverImage(id: number): Promise<string> {
+  try {
+    const query = `
+      query {
+        Media(id: ${id}, type: ANIME) {
+          coverImage {
+            large
+          }
+        }
+      }
+    `;
+
+    const response = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    const data = await response.json();
+    return data.data.Media.coverImage.large;
+  } catch (error) {
+    console.error('Error fetching Anilist cover image:', error);
+    // Return a placeholder image if the fetch fails
+    return 'https://via.placeholder.com/225x315?text=No+Image';
+  }
+}
