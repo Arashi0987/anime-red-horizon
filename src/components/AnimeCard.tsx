@@ -13,6 +13,7 @@ interface AnimeCardProps {
 export function AnimeCard({ anime }: AnimeCardProps) {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchCoverImage = async () => {
@@ -21,6 +22,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         setCoverImage(imageUrl);
       } catch (error) {
         console.error("Error fetching cover image:", error);
+        setImageError(true);
       } finally {
         setIsLoading(false);
       }
@@ -28,6 +30,14 @@ export function AnimeCard({ anime }: AnimeCardProps) {
 
     fetchCoverImage();
   }, [anime.id]);
+
+  // Handle image load errors
+  const handleImageError = () => {
+    console.log(`Image failed to load for ${anime.english_name || anime.romanji_name}`);
+    setImageError(true);
+    // Use a different placeholder that's guaranteed to work
+    setCoverImage(`https://via.placeholder.com/225x315/1a1a2e/ffffff?text=${encodeURIComponent(anime.english_name || anime.romanji_name || "Anime")}`);
+  };
 
   return (
     <Link to={`/anime/${anime.id}`}>
@@ -39,9 +49,10 @@ export function AnimeCard({ anime }: AnimeCardProps) {
             </div>
           ) : (
             <img
-              src={coverImage || "https://via.placeholder.com/225x315?text=No+Image"}
+              src={coverImage || "https://via.placeholder.com/225x315/1a1a2e/ffffff?text=No+Image"}
               alt={anime.english_name || anime.romanji_name || "Anime cover"}
               className="w-full h-full object-cover"
+              onError={handleImageError}
             />
           )}
           {anime.is_dubbed && (

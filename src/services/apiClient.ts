@@ -1,4 +1,3 @@
-
 import { AnimeShow, SoundtrackInfo } from "@/types/anime";
 
 // Determine the API URL dynamically based on deployment environment
@@ -238,9 +237,25 @@ export class ApiClient {
   }
 }
 
-// This function fetches cover art from Anilist based on the ID
+// Mapping of common anime IDs to their image URLs to reduce Anilist API calls
+const ANIME_IMAGE_CACHE = {
+  1535: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1535-kUgkcrfOrkUM.jpg", // Death Note
+  101922: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-WBsBl0ClmgYL.jpg", // Demon Slayer
+  20605: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b20605-k665mVkSug8D.jpg", // My Hero Academia
+  21459: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21459-nYh85uj2Fuwr.jpg", // Attack on Titan
+  20958: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20958-HuFJyr54Mmir.jpg", // One Punch Man
+  // Feel free to add more entries for other anime you're showing
+};
+
+// This function fetches cover art from Anilist based on the ID with improved error handling
 export async function getAnilistCoverImage(id: number): Promise<string> {
   try {
+    // First check if we have the image cached
+    if (ANIME_IMAGE_CACHE[id]) {
+      console.log(`Using cached image for anime ID ${id}`);
+      return ANIME_IMAGE_CACHE[id];
+    }
+    
     const query = `
       query {
         Media(id: ${id}, type: ANIME) {
@@ -251,6 +266,10 @@ export async function getAnilistCoverImage(id: number): Promise<string> {
       }
     `;
 
+    const controller = new AbortController();
+    // Set a timeout to prevent hanging requests
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: {
@@ -258,13 +277,27 @@ export async function getAnilistCoverImage(id: number): Promise<string> {
         'Accept': 'application/json',
       },
       body: JSON.stringify({ query }),
+      signal: controller.signal
     });
 
+    clearTimeout(timeoutId);
+
+    // If we can't get the image from Anilist, throw an error to use our fallback
+    if (!response.ok) {
+      throw new Error(`Failed to fetch from Anilist: ${response.status}`);
+    }
+
     const data = await response.json();
+    
+    // Make sure the response has what we need
+    if (!data?.data?.Media?.coverImage?.large) {
+      throw new Error('Invalid data structure from Anilist API');
+    }
+    
     return data.data.Media.coverImage.large;
   } catch (error) {
     console.error('Error fetching Anilist cover image:', error);
-    // Return a placeholder image if the fetch fails
-    return 'https://via.placeholder.com/225x315?text=No+Image';
+    // Return a placeholder image from Unsplash if the fetch fails
+    return `https://source.unsplash.com/featured/?anime,${id}`;
   }
 }
