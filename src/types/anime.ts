@@ -1,4 +1,3 @@
-
 export interface AnimeShow {
   id: number;
   english_name: string | null;
@@ -16,6 +15,7 @@ export interface AnimeShow {
   episodes_dl: number | null;
   anilist_progress: number | null;
   release_status: string | null;
+  cover_image: string | null;
 }
 
 export interface SoundtrackInfo {

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +17,14 @@ export function AnimeCard({ anime }: AnimeCardProps) {
   useEffect(() => {
     const fetchCoverImage = async () => {
       try {
+        // First try to use the cover_image from the database
+        if (anime.cover_image) {
+          setCoverImage(anime.cover_image);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If no cover_image in database, fall back to Anilist
         const imageUrl = await getAnilistCoverImage(anime.id);
         setCoverImage(imageUrl);
       } catch (error) {
@@ -29,7 +36,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
     };
 
     fetchCoverImage();
-  }, [anime.id]);
+  }, [anime.id, anime.cover_image]);
 
   // Handle image load errors
   const handleImageError = () => {
