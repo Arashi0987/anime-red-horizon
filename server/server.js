@@ -27,8 +27,8 @@ async function initializeDatabase() {
     // We'll look for the database file in the current directory, the instance directory,
     // and one level up in the instance directory
     const possiblePaths = [
-      path.join(__dirname, 'anime_list.db'),
-      path.join(__dirname, 'instance', 'anime_list.db'),
+      //path.join(__dirname, 'anime_list.db'),
+      //path.join(__dirname, 'instance', 'anime_list.db'),
       path.join(__dirname, '..', 'instance', 'anime_list.db')
     ];
     
@@ -88,7 +88,7 @@ app.get('/api/anime/:id', async (req, res) => {
     // Get soundtrack info if it exists
     if (show.soundtrack_path) {
       const soundtrack = await db.get(
-        'SELECT * FROM soundtrack WHERE soundtrack_path = ?', 
+        'SELECT * FROM soundtracks WHERE soundtrack_path = ?', 
         show.soundtrack_path
       );
       
@@ -122,7 +122,7 @@ app.get('/api/anime/search/:query', async (req, res) => {
 // Get all soundtracks
 app.get('/api/soundtracks', async (req, res) => {
   try {
-    const soundtracks = await db.all('SELECT * FROM soundtrack');
+    const soundtracks = await db.all('SELECT * FROM soundtracks');
     res.json(soundtracks);
   } catch (error) {
     console.error(error);
