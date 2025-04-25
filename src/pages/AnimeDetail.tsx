@@ -20,16 +20,30 @@ const AnimeDetail = () => {
   useEffect(() => {
     const fetchAnime = async () => {
       if (!id) return;
-      
+  
       try {
         setIsLoading(true);
         const parsedId = parseInt(id, 10);
         const animeData = await ApiClient.getAnimeWithSoundtrack(parsedId);
         setAnime(animeData);
-
-        // Fetch cover image
-        const imageUrl = await getAnilistCoverImage(parsedId);
-        setCoverImage(imageUrl);
+  
+        // Handle cover image from database or fallback to Anilist
+        if (animeData.cover_image) {
+          const filePath = animeData.cover_image;
+  
+          if (filePath.startsWith("/Media")) {
+            const relativePath = filePath.replace("/Media", "");
+            const encoded = encodeURI(relativePath);
+            const imageUrl = `http://panther:5000/media${encoded}`;
+            setCoverImage(imageUrl);
+          } else {
+            setCoverImage(filePath); // assume already valid URL
+          }
+        } else {
+          // Fallback to Anilist
+          const imageUrl = await getAnilistCoverImage(animeData.id);
+          setCoverImage(imageUrl);
+        }
       } catch (error) {
         console.error("Error fetching anime details:", error);
         setError("Failed to load anime details. Please try again later.");
@@ -37,7 +51,7 @@ const AnimeDetail = () => {
         setIsLoading(false);
       }
     };
-
+  
     fetchAnime();
   }, [id]);
 

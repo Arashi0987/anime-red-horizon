@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+instance/.anime_list.db_bk
+server/package-lock.json

@@ -7,12 +7,12 @@ const getApiUrl = () => {
   
   // If we're in a development environment running on localhost/127.0.0.1
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return "http://localhost:5000/api";
+    return "http://panther:5000/api";
   } 
   // If we're running from another machine in the network (accessing via hostname like 'panther')
   else {
     // Use the same hostname but different port for the API
-    return `http://${hostname}:5000/api`;
+    return `http://panther:5000/api`;
   }
 };
 
