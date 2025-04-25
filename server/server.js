@@ -8,6 +8,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use('/media', express.static('/Media'));
+
 // Enable CORS with more comprehensive configuration
 app.use(cors({
   origin: '*', // Allow all origins during development

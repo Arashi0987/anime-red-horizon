@@ -19,7 +19,18 @@ export function AnimeCard({ anime }: AnimeCardProps) {
       try {
         // First try to use the cover_image from the database
         if (anime.cover_image) {
-          setCoverImage(anime.cover_image);
+          const filePath = anime.cover_image;
+        
+          // If it's an absolute path like /Media/..., convert it to a URL
+          if (filePath.startsWith("/Media")) {
+            const relativePath = filePath.replace("/Media", "");
+            const encoded = encodeURI(relativePath); // encodes spaces and parentheses
+            const imageUrl = `http://localhost:5000/media${encoded}`;
+            setCoverImage(imageUrl);
+          } else {
+            setCoverImage(filePath); // assume it's already a URL
+          }
+        
           setIsLoading(false);
           return;
         }
