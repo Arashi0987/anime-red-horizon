@@ -25,7 +25,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
           if (filePath.startsWith("/Media")) {
             const relativePath = filePath.replace("/Media", "");
             const encoded = encodeURI(relativePath); // encodes spaces and parentheses
-            const imageUrl = `http://localhost:5000/media${encoded}`;
+            const imageUrl = `http://panther:5000/media${encoded}`;
             setCoverImage(imageUrl);
           } else {
             setCoverImage(filePath); // assume it's already a URL
