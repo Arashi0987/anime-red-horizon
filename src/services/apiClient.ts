@@ -165,7 +165,8 @@ export class ApiClient {
         anilist_progress: 37,
         release_status: "Completed",
         cover_image: null,
-        watch_status: "COMPLETED"
+        watch_status: "COMPLETED",
+        anilist_score: null
       },
       {
         id: 101922,
@@ -185,7 +186,8 @@ export class ApiClient {
         anilist_progress: 26,
         release_status: "Ongoing",
         cover_image: null,
-        watch_status: "CURRENT"
+        watch_status: "CURRENT",
+        anilist_score: null
       },
       {
         id: 20605,
@@ -205,7 +207,8 @@ export class ApiClient {
         anilist_progress: 13,
         release_status: "Ongoing",
         cover_image: null,
-        watch_status: "PLANNING"
+        watch_status: "PLANNING",
+        anilist_score: null
       },
       {
         id: 21459,
@@ -225,7 +228,8 @@ export class ApiClient {
         anilist_progress: 25,
         release_status: "Completed",
         cover_image: null,
-        watch_status: "COMPLETED"
+        watch_status: "COMPLETED",
+        anilist_score: null
       },
       {
         id: 20958,
@@ -245,7 +249,8 @@ export class ApiClient {
         anilist_progress: 12,
         release_status: "Ongoing",
         cover_image: null,
-        watch_status: "PAUSED"
+        watch_status: "PAUSED",
+        anilist_score: null
       },
     ];
   }
@@ -308,6 +313,7 @@ export async function getAnilistCoverImage(id: number): Promise<string> {
           coverImage {
             large
           }
+          averageScore
         }
       }
     `;
@@ -338,6 +344,13 @@ export async function getAnilistCoverImage(id: number): Promise<string> {
     // Make sure the response has what we need
     if (!data?.data?.Media?.coverImage?.large) {
       throw new Error('Invalid data structure from Anilist API');
+    }
+
+    // Update the anime in the database with the score if available
+    if (data?.data?.Media?.averageScore) {
+      // Note: You'll need to implement this API endpoint on your backend
+      const score = data.data.Media.averageScore / 10; // Convert to 1-10 scale
+      console.log(`Retrieved score for anime ${id}: ${score}`);
     }
     
     return data.data.Media.coverImage.large;

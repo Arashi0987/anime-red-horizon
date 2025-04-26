@@ -17,6 +17,7 @@ export interface AnimeShow {
   release_status: string | null;
   cover_image: string | null;
   watch_status: 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'REPEATING' | 'PAUSED' | null;
+  anilist_score?: number | null;
 }
 
 export interface SoundtrackInfo {
