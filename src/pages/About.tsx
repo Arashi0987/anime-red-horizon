@@ -1,12 +1,19 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Separator } from "@/components/ui/separator";
 
 const About = () => {
+  // Add a dummy state for search to satisfy the Navbar props
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Dummy search handler
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Navbar />
+      <Navbar onSearch={handleSearch} searchQuery={searchQuery} />
       <main className="flex-1 container py-8 max-w-4xl">
         <div className="space-y-8">
           <div className="space-y-4">
