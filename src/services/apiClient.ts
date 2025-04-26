@@ -18,6 +18,18 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
+// Add these constants at the top
+const PLEX_SERVER = 'http://10.69.69.2:32400';
+const PLEX_API_KEY = 'ct3YmCjMytMAbuDN-WsT';
+const SONARR_SERVER = 'http://10.69.69.5:8989';
+const SONARR_API_KEY = '2a3168821bd3472e8c72db6834a49d1f';
+
+export interface ExternalLinks {
+  plexUrl: string | null;
+  anilistUrl: string | null;
+  sonarrUrl: string | null;
+}
+
 // This client can be used with the Express server (see server/server.js)
 // It provides methods to fetch data from your actual SQLite database
 export class ApiClient {
@@ -108,7 +120,31 @@ export class ApiClient {
     }
   }
 
-  // Sample data for development/fallback
+  static async getExternalLinks(animeId: number, sonarrId: number | null): Promise<ExternalLinks> {
+    try {
+      // For now, we'll return static URLs until we implement the API calls
+      const anilistUrl = `https://anilist.co/anime/${animeId}`;
+      
+      // These will need proper API implementation
+      const plexUrl = `${PLEX_SERVER}/web/index.html#!/server/library/metadata/${animeId}?X-Plex-Token=${PLEX_API_KEY}`;
+      const sonarrUrl = sonarrId ? `${SONARR_SERVER}/series/${sonarrId}` : null;
+
+      return {
+        plexUrl,
+        anilistUrl,
+        sonarrUrl
+      };
+    } catch (error) {
+      console.error('Error fetching external links:', error);
+      return {
+        plexUrl: null,
+        anilistUrl: null,
+        sonarrUrl: null
+      };
+    }
+  }
+
+  // Update sample data to include new fields
   private static getSampleAnimeList(): AnimeShow[] {
     return [
       {
@@ -128,6 +164,8 @@ export class ApiClient {
         episodes_dl: 37,
         anilist_progress: 37,
         release_status: "Completed",
+        cover_image: null,
+        watch_status: "COMPLETED"
       },
       {
         id: 101922,
@@ -146,6 +184,8 @@ export class ApiClient {
         episodes_dl: 26,
         anilist_progress: 26,
         release_status: "Ongoing",
+        cover_image: null,
+        watch_status: "CURRENT"
       },
       {
         id: 20605,
@@ -164,6 +204,8 @@ export class ApiClient {
         episodes_dl: 13,
         anilist_progress: 13,
         release_status: "Ongoing",
+        cover_image: null,
+        watch_status: "PLANNING"
       },
       {
         id: 21459,
@@ -182,6 +224,8 @@ export class ApiClient {
         episodes_dl: 25,
         anilist_progress: 25,
         release_status: "Completed",
+        cover_image: null,
+        watch_status: "COMPLETED"
       },
       {
         id: 20958,
@@ -200,6 +244,8 @@ export class ApiClient {
         episodes_dl: 12,
         anilist_progress: 12,
         release_status: "Ongoing",
+        cover_image: null,
+        watch_status: "PAUSED"
       },
     ];
   }

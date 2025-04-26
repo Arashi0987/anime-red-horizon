@@ -32,3 +32,9 @@ export interface SoundtrackInfo {
 export interface AnimeShowWithSoundtrack extends AnimeShow {
   soundtrack_info?: SoundtrackInfo;
 }
+
+export interface ExternalLinks {
+  plexUrl: string | null;
+  anilistUrl: string | null;
+  sonarrUrl: string | null;
+}

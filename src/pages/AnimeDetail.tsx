@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -6,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
-import { AnimeShowWithSoundtrack } from "@/types/anime";
+import { AnimeShowWithSoundtrack, ExternalLinks } from "@/types/anime";
 import { ApiClient, getAnilistCoverImage } from "@/services/apiClient";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 
 const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,9 +15,11 @@ const AnimeDetail = () => {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [externalLinks, setExternalLinks] = useState<ExternalLinks | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const fetchAnime = async () => {
+    const fetchData = async () => {
       if (!id) return;
   
       try {
@@ -27,6 +28,12 @@ const AnimeDetail = () => {
         const animeData = await ApiClient.getAnimeWithSoundtrack(parsedId);
         setAnime(animeData);
   
+        // Fetch external links
+        if (animeData) {
+          const links = await ApiClient.getExternalLinks(parsedId, animeData.sonarr_id);
+          setExternalLinks(links);
+        }
+
         // Handle cover image from database or fallback to Anilist
         if (animeData.cover_image) {
           const filePath = animeData.cover_image;
@@ -52,13 +59,13 @@ const AnimeDetail = () => {
       }
     };
   
-    fetchAnime();
+    fetchData();
   }, [id]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <Navbar />
+        <Navbar onSearch={setSearchQuery} searchQuery={searchQuery} />
         <main className="flex-1 container py-8">
           <div className="flex flex-col items-center justify-center h-[70vh]">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -72,7 +79,7 @@ const AnimeDetail = () => {
   if (error || !anime) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <Navbar />
+        <Navbar onSearch={setSearchQuery} searchQuery={searchQuery} />
         <main className="flex-1 container py-8">
           <div className="flex flex-col items-center justify-center h-[70vh]">
             <h2 className="text-2xl font-bold mb-4">Error</h2>
@@ -91,7 +98,7 @@ const AnimeDetail = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Navbar />
+      <Navbar onSearch={setSearchQuery} searchQuery={searchQuery} />
       <main className="flex-1 container py-8">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/">
@@ -138,6 +145,34 @@ const AnimeDetail = () => {
                   <Badge variant="secondary" className="w-full justify-center text-sm py-1">
                     Monitored in Sonarr
                   </Badge>
+                )}
+              </div>
+            
+              {/* External Links */}
+              <div className="mt-4 space-y-2">
+                {externalLinks?.plexUrl && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={externalLinks.plexUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Open in Plex
+                    </a>
+                  </Button>
+                )}
+                {externalLinks?.anilistUrl && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={externalLinks.anilistUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View on AniList
+                    </a>
+                  </Button>
+                )}
+                {externalLinks?.sonarrUrl && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={externalLinks.sonarrUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Open in Sonarr
+                    </a>
+                  </Button>
                 )}
               </div>
             </div>
