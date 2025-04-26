@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -118,9 +119,9 @@ const AnimeDetail = () => {
                   className="w-full object-cover"
                 />
                 {anime.anilist_score && (
-                  <div className="absolute top-2 left-2 bg-black/80 rounded-full p-2 backdrop-blur-sm">
-                    <div className="text-xl font-bold text-yellow-400 flex items-center justify-center">
-                      ★ {anime.anilist_score.toFixed(1)}
+                  <div className="absolute top-2 left-2 bg-black/80 rounded-md p-2 backdrop-blur-sm">
+                    <div className="text-xl font-bold text-yellow-400">
+                      {anime.anilist_score.toFixed(1)}
                     </div>
                   </div>
                 )}

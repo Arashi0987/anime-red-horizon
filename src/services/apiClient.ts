@@ -166,7 +166,7 @@ export class ApiClient {
         release_status: "Completed",
         cover_image: null,
         watch_status: "COMPLETED",
-        anilist_score: null
+        anilist_score: 8.7
       },
       {
         id: 101922,
@@ -187,7 +187,7 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "CURRENT",
-        anilist_score: null
+        anilist_score: 9.2
       },
       {
         id: 20605,
@@ -208,7 +208,7 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "PLANNING",
-        anilist_score: null
+        anilist_score: 8.5
       },
       {
         id: 21459,
@@ -229,7 +229,7 @@ export class ApiClient {
         release_status: "Completed",
         cover_image: null,
         watch_status: "COMPLETED",
-        anilist_score: null
+        anilist_score: 9.0
       },
       {
         id: 20958,
@@ -250,7 +250,7 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "PAUSED",
-        anilist_score: null
+        anilist_score: 8.8
       },
     ];
   }
