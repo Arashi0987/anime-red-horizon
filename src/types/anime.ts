@@ -1,3 +1,4 @@
+
 export interface AnimeShow {
   id: number;
   english_name: string | null;
@@ -18,6 +19,7 @@ export interface AnimeShow {
   cover_image: string | null;
   watch_status: 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'REPEATING' | 'PAUSED' | null;
   anilist_score?: number | null;
+  plex_id?: number | null; // Add the new plex_id field
 }
 
 export interface SoundtrackInfo {

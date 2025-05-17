@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -29,9 +28,9 @@ const AnimeDetail = () => {
         const animeData = await ApiClient.getAnimeWithSoundtrack(parsedId);
         setAnime(animeData);
   
-        // Fetch external links
+        // Fetch external links with plex_id
         if (animeData) {
-          const links = await ApiClient.getExternalLinks(parsedId, animeData.sonarr_id);
+          const links = await ApiClient.getExternalLinks(parsedId, animeData.sonarr_id, animeData.plex_id);
           setExternalLinks(links);
         }
 

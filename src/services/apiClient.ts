@@ -23,6 +23,7 @@ const PLEX_SERVER = 'http://10.69.69.2:32400';
 const PLEX_API_KEY = 'ct3YmCjMytMAbuDN-WsT';
 const SONARR_SERVER = 'http://10.69.69.5:8989';
 const SONARR_API_KEY = '2a3168821bd3472e8c72db6834a49d1f';
+const PLEX_BASE_URL = 'fox:32400/web/index.html#!/server/dee803aee81588094b32e6421c83111317709994/details?key=%2Flibrary%2Fmetadata%2F';
 
 export interface ExternalLinks {
   plexUrl: string | null;
@@ -120,13 +121,13 @@ export class ApiClient {
     }
   }
 
-  static async getExternalLinks(animeId: number, sonarrId: number | null): Promise<ExternalLinks> {
+  static async getExternalLinks(animeId: number, sonarrId: number | null, plexId: number | null): Promise<ExternalLinks> {
     try {
       // For now, we'll return static URLs until we implement the API calls
       const anilistUrl = `https://anilist.co/anime/${animeId}`;
       
-      // These will need proper API implementation
-      const plexUrl = `${PLEX_SERVER}/web/index.html#!/server/library/metadata/${animeId}?X-Plex-Token=${PLEX_API_KEY}`;
+      // Use the plex_id to generate the Plex URL using the new format
+      const plexUrl = plexId ? `${PLEX_BASE_URL}${plexId}` : null;
       const sonarrUrl = sonarrId ? `${SONARR_SERVER}/series/${sonarrId}` : null;
 
       return {
@@ -166,7 +167,8 @@ export class ApiClient {
         release_status: "Completed",
         cover_image: null,
         watch_status: "COMPLETED",
-        anilist_score: 8.7
+        anilist_score: 8.7,
+        plex_id: 49323
       },
       {
         id: 101922,
@@ -187,7 +189,8 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "CURRENT",
-        anilist_score: 9.2
+        anilist_score: 9.2,
+        plex_id: 50434
       },
       {
         id: 20605,
@@ -208,7 +211,8 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "PLANNING",
-        anilist_score: 8.5
+        anilist_score: 8.5,
+        plex_id: 51545
       },
       {
         id: 21459,
@@ -229,7 +233,8 @@ export class ApiClient {
         release_status: "Completed",
         cover_image: null,
         watch_status: "COMPLETED",
-        anilist_score: 9.0
+        anilist_score: 9.0,
+        plex_id: 52656
       },
       {
         id: 20958,
@@ -250,7 +255,8 @@ export class ApiClient {
         release_status: "Ongoing",
         cover_image: null,
         watch_status: "PAUSED",
-        anilist_score: 8.8
+        anilist_score: 8.8,
+        plex_id: 53767
       },
     ];
   }
