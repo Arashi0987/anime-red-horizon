@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +74,13 @@ export function AnimeCard({ anime }: AnimeCardProps) {
               onError={handleImageError}
             />
           )}
+          {anime.anilist_score && (
+            <div className="absolute top-2 left-2 bg-black/80 rounded-md p-2 backdrop-blur-sm">
+              <div className="text-sm font-bold text-yellow-400">
+                {anime.anilist_score.toFixed(1)}
+              </div>
+            </div>
+          )}
           {anime.is_dubbed && (
             <Badge variant="info" className="absolute top-2 right-2">
               Dubbed
@@ -83,9 +91,10 @@ export function AnimeCard({ anime }: AnimeCardProps) {
           <h3 className="font-bold truncate text-lg">
             {anime.english_name || anime.romanji_name || "Unknown Title"}
           </h3>
-          {anime.english_name && anime.romanji_name && (
-            <p className="text-sm text-muted-foreground truncate">{anime.romanji_name}</p>
-          )}
+          <div className="text-sm text-muted-foreground mt-1">
+            <div>Progress: {anime.anilist_progress || 0} / {anime.episodes || 0}</div>
+            <div>Downloaded: {anime.episodes_dl || 0} / {anime.episodes || 0}</div>
+          </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-sm">{anime.year}</span>
             <Badge

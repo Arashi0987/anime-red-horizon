@@ -5,9 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { AnimeShowWithSoundtrack, ExternalLinks } from "@/types/anime";
 import { ApiClient, getAnilistCoverImage } from "@/services/apiClient";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, ChevronDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const WATCH_STATUSES = ['CURRENT', 'PLANNING', 'COMPLETED', 'REPEATING', 'PAUSED'] as const;
 
 const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +28,10 @@ const AnimeDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [externalLinks, setExternalLinks] = useState<ExternalLinks | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingProgress, setEditingProgress] = useState(false);
+  const [tempProgress, setTempProgress] = useState<number>(0);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,6 +42,7 @@ const AnimeDetail = () => {
         const parsedId = parseInt(id, 10);
         const animeData = await ApiClient.getAnimeWithSoundtrack(parsedId);
         setAnime(animeData);
+        setTempProgress(animeData.anilist_progress || 0);
   
         // Fetch external links with plex_id
         if (animeData) {
@@ -61,6 +77,34 @@ const AnimeDetail = () => {
   
     fetchData();
   }, [id]);
+
+  const handleProgressSave = () => {
+    if (anime && tempProgress <= (anime.episodes || 0)) {
+      setAnime({ ...anime, anilist_progress: tempProgress });
+      setEditingProgress(false);
+      toast({
+        title: "Progress Updated",
+        description: `Progress set to ${tempProgress}`,
+      });
+    } else {
+      toast({
+        title: "Invalid Progress",
+        description: "Progress cannot exceed total episodes",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusChange = (newStatus: typeof WATCH_STATUSES[number]) => {
+    if (anime) {
+      setAnime({ ...anime, watch_status: newStatus });
+      setEditingStatus(false);
+      toast({
+        title: "Status Updated",
+        description: `Status changed to ${newStatus}`,
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -209,12 +253,99 @@ const AnimeDetail = () => {
 
             <Separator className="bg-anime-gray/50" />
 
+            {/* Progress and Status Section */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Progress & Status</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="progress">AniList Progress</Label>
+                  {editingProgress ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id="progress"
+                        type="number"
+                        min="0"
+                        max={anime.episodes || 0}
+                        value={tempProgress}
+                        onChange={(e) => setTempProgress(parseInt(e.target.value) || 0)}
+                        className="flex-1"
+                      />
+                      <Button onClick={handleProgressSave} size="sm">Save</Button>
+                      <Button 
+                        onClick={() => {
+                          setEditingProgress(false);
+                          setTempProgress(anime.anilist_progress || 0);
+                        }} 
+                        variant="outline" 
+                        size="sm"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{anime.anilist_progress || 0} / {anime.episodes || 0}</span>
+                      <Button onClick={() => setEditingProgress(true)} variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Watch Status</Label>
+                  {editingStatus ? (
+                    <div className="flex gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex-1 justify-between">
+                            {anime.watch_status || "Select Status"}
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full bg-background border border-border">
+                          {WATCH_STATUSES.map((status) => (
+                            <DropdownMenuItem 
+                              key={status} 
+                              onClick={() => handleStatusChange(status)}
+                              className="cursor-pointer"
+                            >
+                              {status}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button onClick={() => setEditingStatus(false)} variant="outline" size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={
+                          anime.watch_status === "COMPLETED" ? "success" :
+                          anime.watch_status === "CURRENT" ? "warning" :
+                          "secondary"
+                        }
+                      >
+                        {anime.watch_status || "Unknown"}
+                      </Badge>
+                      <Button onClick={() => setEditingStatus(true)} variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator className="bg-anime-gray/50" />
+
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                 <DetailItem label="Season Number" value={anime.season_number?.toString()} />
                 <DetailItem label="Episodes Downloaded" value={`${anime.episodes_dl} / ${anime.episodes}`} />
-                <DetailItem label="AniList Progress" value={anime.anilist_progress?.toString()} />
                 <DetailItem label="Sonarr ID" value={anime.sonarr_id?.toString()} />
               </div>
             </div>
