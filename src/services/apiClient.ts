@@ -23,7 +23,7 @@ const PLEX_SERVER = 'http://10.69.69.2:32400';
 const PLEX_API_KEY = 'ct3YmCjMytMAbuDN-WsT';
 const SONARR_SERVER = 'http://10.69.69.5:8989';
 const SONARR_API_KEY = '2a3168821bd3472e8c72db6834a49d1f';
-const PLEX_BASE_URL = 'fox:32400/web/index.html#!/server/dee803aee81588094b32e6421c83111317709994/details?key=%2Flibrary%2Fmetadata%2F';
+const PLEX_BASE_URL = 'http://fox:32400/web/index.html#!/server/dee803aee81588094b32e6421c83111317709994/details?key=%2Flibrary%2Fmetadata%2F';
 
 export interface ExternalLinks {
   plexUrl: string | null;
