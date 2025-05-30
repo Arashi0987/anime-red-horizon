@@ -28,6 +28,26 @@ export interface AnilistAnime {
   };
   format: string | null;
   duration: number | null;
+  nextAiringEpisode: {
+    airingAt: number;
+    episode: number;
+  } | null;
+}
+
+export interface AiringAnime {
+  id: number;
+  title: {
+    english: string | null;
+    romaji: string;
+  };
+  nextAiringEpisode: {
+    airingAt: number;
+    episode: number;
+  };
+  coverImage: {
+    medium: string;
+  };
+  episodes: number | null;
 }
 
 export class AnilistClient {
@@ -66,6 +86,10 @@ export class AnilistClient {
             }
             format
             duration
+            nextAiringEpisode {
+              airingAt
+              episode
+            }
           }
         }
       `;
@@ -91,6 +115,51 @@ export class AnilistClient {
     } catch (error) {
       console.error(`Error fetching anime ${id} from AniList:`, error);
       return null;
+    }
+  }
+
+  static async getAiringAnime(): Promise<AiringAnime[]> {
+    try {
+      const query = `
+        query {
+          Page(page: 1, perPage: 50) {
+            media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC) {
+              id
+              title {
+                english
+                romaji
+              }
+              nextAiringEpisode {
+                airingAt
+                episode
+              }
+              coverImage {
+                medium
+              }
+              episodes
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(this.GRAPHQL_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch airing anime: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.data.Page.media.filter((anime: AiringAnime) => anime.nextAiringEpisode);
+    } catch (error) {
+      console.error('Error fetching airing anime from AniList:', error);
+      return [];
     }
   }
 

@@ -7,10 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { AnimeShow } from "@/types/anime";
 import { ApiClient } from "@/services/apiClient";
+import { AnilistClient, AiringAnime } from "@/services/anilistClient";
 
 interface AnimeRelease {
-  anime: AnimeShow;
-  nextEpisodeDate?: Date;
+  id: number;
+  title: string;
+  episode: number;
+  airingDate: Date;
+  isFromDatabase: boolean;
+  coverImage?: string;
 }
 
 const Calendar = () => {
@@ -21,55 +26,64 @@ const Calendar = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAnimeList = async () => {
+    const fetchReleaseData = async () => {
       try {
         setIsLoading(true);
-        const data = await ApiClient.getAnimeList();
-        setAnimeList(data);
         
-        // For now, we'll create mock release dates since we don't have this data in the database
-        // In a real implementation, you'd fetch actual airing schedules from AniList
-        const releases: AnimeRelease[] = data
-          .filter(anime => anime.release_status === "Ongoing" || anime.watch_status === "CURRENT")
-          .map(anime => ({
-            anime,
-            nextEpisodeDate: getNextEpisodeDate(anime)
-          }))
-          .filter(release => release.nextEpisodeDate);
+        // Fetch both database anime and AniList airing data
+        const [databaseAnime, airingAnime] = await Promise.all([
+          ApiClient.getAnimeList(),
+          AnilistClient.getAiringAnime()
+        ]);
+
+        setAnimeList(databaseAnime);
+        
+        // Convert both data sources to unified release format
+        const releases: AnimeRelease[] = [];
+        
+        // Add releases from database anime (for ongoing shows)
+        const ongoingDatabaseAnime = databaseAnime.filter(
+          anime => anime.release_status === "Ongoing" || anime.watch_status === "CURRENT"
+        );
+        
+        // Add releases from AniList airing data
+        airingAnime.forEach(anime => {
+          if (anime.nextAiringEpisode) {
+            const airingDate = new Date(anime.nextAiringEpisode.airingAt * 1000);
+            
+            // Check if this anime is also in our database
+            const dbAnime = databaseAnime.find(db => db.id === anime.id);
+            
+            releases.push({
+              id: anime.id,
+              title: anime.title.english || anime.title.romaji,
+              episode: anime.nextAiringEpisode.episode,
+              airingDate,
+              isFromDatabase: !!dbAnime,
+              coverImage: anime.coverImage.medium
+            });
+          }
+        });
+        
+        // Sort releases by date
+        releases.sort((a, b) => a.airingDate.getTime() - b.airingDate.getTime());
         
         setAnimeReleases(releases);
       } catch (error) {
-        console.error("Error fetching anime list:", error);
+        console.error("Error fetching release data:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAnimeList();
+    fetchReleaseData();
   }, []);
-
-  // Mock function to generate next episode dates - in real app, this would come from AniList
-  const getNextEpisodeDate = (anime: AnimeShow): Date | undefined => {
-    if (anime.release_status !== "Ongoing" && anime.watch_status !== "CURRENT") {
-      return undefined;
-    }
-    
-    // Generate a random date within the next 30 days for demo purposes
-    const today = new Date();
-    const randomDays = Math.floor(Math.random() * 30);
-    const releaseDate = new Date(today);
-    releaseDate.setDate(today.getDate() + randomDays);
-    
-    return releaseDate;
-  };
 
   const getAnimeForDate = (date: Date) => {
     if (!date) return [];
     
     return animeReleases.filter(release => {
-      if (!release.nextEpisodeDate) return false;
-      
-      const releaseDate = release.nextEpisodeDate;
+      const releaseDate = release.airingDate;
       return (
         releaseDate.getDate() === date.getDate() &&
         releaseDate.getMonth() === date.getMonth() &&
@@ -81,9 +95,17 @@ const Calendar = () => {
   const selectedDateReleases = selectedDate ? getAnimeForDate(selectedDate) : [];
 
   const getDatesWithReleases = () => {
+    return animeReleases.map(release => release.airingDate);
+  };
+
+  // Get upcoming releases for the next 30 days
+  const getUpcomingReleases = () => {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
     return animeReleases
-      .map(release => release.nextEpisodeDate)
-      .filter(date => date) as Date[];
+      .filter(release => release.airingDate >= now && release.airingDate <= thirtyDaysFromNow)
+      .slice(0, 15);
   };
 
   return (
@@ -93,6 +115,9 @@ const Calendar = () => {
       <main className="flex-1 container py-8">
         <div className="space-y-6">
           <h1 className="text-3xl font-bold tracking-tight">Release Calendar</h1>
+          <p className="text-muted-foreground">
+            Showing real-time airing schedules from AniList for currently releasing anime.
+          </p>
           
           {isLoading ? (
             <div className="flex justify-center py-12">
@@ -138,24 +163,35 @@ const Calendar = () => {
                 <CardContent>
                   {selectedDateReleases.length > 0 ? (
                     <div className="space-y-4">
-                      {selectedDateReleases.map(({ anime }) => (
-                        <div key={anime.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      {selectedDateReleases.map((release) => (
+                        <div key={`${release.id}-${release.episode}`} className="flex items-center gap-4 p-4 border rounded-lg">
+                          {release.coverImage && (
+                            <img 
+                              src={release.coverImage} 
+                              alt={release.title}
+                              className="w-12 h-16 object-cover rounded"
+                            />
+                          )}
                           <div className="flex-1">
                             <Link 
-                              to={`/anime/${anime.id}`}
+                              to={`/anime/${release.id}`}
                               className="font-medium hover:text-primary transition-colors"
                             >
-                              {anime.english_name || anime.romanji_name}
+                              {release.title}
                             </Link>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary">
-                                Episode {(anime.anilist_progress || 0) + 1}
+                                Episode {release.episode}
                               </Badge>
-                              {anime.watch_status && (
-                                <Badge variant="outline">
-                                  {anime.watch_status}
-                                </Badge>
-                              )}
+                              <Badge variant={release.isFromDatabase ? "default" : "outline"}>
+                                {release.isFromDatabase ? "In Library" : "AniList"}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {release.airingDate.toLocaleTimeString([], { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -178,39 +214,52 @@ const Calendar = () => {
           {!isLoading && animeReleases.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>All Upcoming Releases</CardTitle>
+                <CardTitle>Next 30 Days</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {animeReleases
-                    .sort((a, b) => {
-                      if (!a.nextEpisodeDate || !b.nextEpisodeDate) return 0;
-                      return a.nextEpisodeDate.getTime() - b.nextEpisodeDate.getTime();
-                    })
-                    .slice(0, 10)
-                    .map(({ anime, nextEpisodeDate }) => (
-                      <div key={anime.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {getUpcomingReleases().map((release) => (
+                    <div key={`${release.id}-${release.episode}`} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {release.coverImage && (
+                          <img 
+                            src={release.coverImage} 
+                            alt={release.title}
+                            className="w-10 h-14 object-cover rounded"
+                          />
+                        )}
                         <div>
                           <Link 
-                            to={`/anime/${anime.id}`}
+                            to={`/anime/${release.id}`}
                             className="font-medium hover:text-primary transition-colors"
                           >
-                            {anime.english_name || anime.romanji_name}
+                            {release.title}
                           </Link>
-                          <p className="text-sm text-muted-foreground">
-                            Episode {(anime.anilist_progress || 0) + 1}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            {nextEpisodeDate?.toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {nextEpisodeDate?.toLocaleDateString('en-US', { weekday: 'long' })}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">
+                              Episode {release.episode}
+                            </Badge>
+                            <Badge variant={release.isFromDatabase ? "default" : "outline"} className="text-xs">
+                              {release.isFromDatabase ? "In Library" : "AniList"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {release.airingDate.toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {release.airingDate.toLocaleDateString('en-US', { weekday: 'long' })} • {
+                            release.airingDate.toLocaleTimeString([], { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

@@ -32,54 +32,66 @@ const AnimeDetail = () => {
   
       try {
         setIsLoading(true);
+        setError(null);
         const parsedId = parseInt(id, 10);
         
-        // First try to get from our database
-        const animeData = await ApiClient.getAnimeById(parsedId);
-        
-        if (animeData) {
-          // Anime is in our database
-          setAnime(animeData);
-          setIsInDatabase(true);
-
-          // Fetch external links with plex_id
-          const links = await ApiClient.getExternalLinks(parsedId, animeData.sonarr_id, animeData.plex_id);
-          setExternalLinks(links);
-
-          // Handle cover image from database or fallback to Anilist
-          if (animeData.cover_image) {
-            const filePath = animeData.cover_image;
-            if (filePath.startsWith("/Media")) {
-              const relativePath = filePath.replace("/Media", "");
-              const encoded = encodeURI(relativePath);
-              const imageUrl = `http://panther:5000/media${encoded}`;
-              setCoverImage(imageUrl);
-            } else {
-              setCoverImage(filePath);
-            }
-          } else {
-            const imageUrl = await getAnilistCoverImage(animeData.id);
-            setCoverImage(imageUrl);
-          }
+        if (isNaN(parsedId)) {
+          setError("Invalid anime ID");
+          return;
         }
         
-        // Always fetch from AniList for additional info (description, etc.)
+        // Always try to fetch from AniList first for reliability
         const anilistData = await AnilistClient.getAnimeById(parsedId);
         setAnilistAnime(anilistData);
         
-        if (!animeData && anilistData) {
-          // Anime is not in our database, use AniList data only
+        if (!anilistData) {
+          setError("Anime not found on AniList");
+          return;
+        }
+        
+        // Set cover image from AniList
+        setCoverImage(anilistData.coverImage.large);
+        
+        // Try to get from our database
+        try {
+          const animeData = await ApiClient.getAnimeById(parsedId);
+          if (animeData) {
+            setAnime(animeData);
+            setIsInDatabase(true);
+            
+            // Fetch external links with plex_id for database anime
+            const links = await ApiClient.getExternalLinks(parsedId, animeData.sonarr_id, animeData.plex_id);
+            setExternalLinks(links);
+            
+            // Override cover image if we have one in database
+            if (animeData.cover_image) {
+              const filePath = animeData.cover_image;
+              if (filePath.startsWith("/Media")) {
+                const relativePath = filePath.replace("/Media", "");
+                const encoded = encodeURI(relativePath);
+                const imageUrl = `http://panther:5000/media${encoded}`;
+                setCoverImage(imageUrl);
+              } else {
+                setCoverImage(filePath);
+              }
+            }
+          } else {
+            // Anime is not in our database, use AniList data only
+            setIsInDatabase(false);
+            setExternalLinks({
+              plexUrl: null,
+              anilistUrl: `https://anilist.co/anime/${parsedId}`,
+              sonarrUrl: null
+            });
+          }
+        } catch (dbError) {
+          console.log("Anime not in database, using AniList data only");
           setIsInDatabase(false);
-          setCoverImage(anilistData.coverImage.large);
           setExternalLinks({
             plexUrl: null,
             anilistUrl: `https://anilist.co/anime/${parsedId}`,
             sonarrUrl: null
           });
-        }
-        
-        if (!animeData && !anilistData) {
-          setError("Anime not found");
         }
       } catch (error) {
         console.error("Error fetching anime details:", error);
@@ -110,7 +122,7 @@ const AnimeDetail = () => {
     );
   }
 
-  if (error || (!anime && !anilistAnime)) {
+  if (error || !anilistAnime) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar onSearch={setSearchQuery} searchQuery={searchQuery} />
@@ -131,8 +143,8 @@ const AnimeDetail = () => {
   }
 
   // Use data from our database if available, otherwise use AniList data
-  const title = anime?.english_name || anime?.romanji_name || anilistAnime?.title.english || anilistAnime?.title.romaji || "Unknown Title";
-  const score = anime?.anilist_score || (anilistAnime?.averageScore ? anilistAnime.averageScore / 10 : null);
+  const title = anime?.english_name || anime?.romanji_name || anilistAnime.title.english || anilistAnime.title.romaji || "Unknown Title";
+  const score = anime?.anilist_score || (anilistAnime.averageScore ? anilistAnime.averageScore / 10 : null);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -165,8 +177,8 @@ const AnimeDetail = () => {
               isInDatabase={isInDatabase}
             />
 
-            {/* Description Section */}
-            {anilistAnime?.description && (
+            {/* Description Section - Always show from AniList */}
+            {anilistAnime.description && (
               <>
                 <Separator className="bg-anime-gray/50" />
                 <div className="space-y-4">
