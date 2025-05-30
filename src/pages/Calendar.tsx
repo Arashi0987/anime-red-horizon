@@ -82,13 +82,20 @@ const Calendar = () => {
   const getAnimeForDate = (date: Date) => {
     if (!date) return [];
     
-    return animeReleases.filter(release => {
+    const releases = animeReleases.filter(release => {
       const releaseDate = release.airingDate;
       return (
         releaseDate.getDate() === date.getDate() &&
         releaseDate.getMonth() === date.getMonth() &&
         releaseDate.getFullYear() === date.getFullYear()
       );
+    });
+    
+    // Sort by library status (library shows first) then by episode number
+    return releases.sort((a, b) => {
+      if (a.isFromDatabase && !b.isFromDatabase) return -1;
+      if (!a.isFromDatabase && b.isFromDatabase) return 1;
+      return a.episode - b.episode;
     });
   };
 
@@ -116,7 +123,7 @@ const Calendar = () => {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold tracking-tight">Release Calendar</h1>
           <p className="text-muted-foreground">
-            Showing real-time airing schedules from AniList for currently releasing anime.
+            Showing real-time airing schedules from AniList for currently releasing anime. Library shows appear first.
           </p>
           
           {isLoading ? (

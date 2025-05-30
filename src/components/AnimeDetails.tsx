@@ -39,7 +39,7 @@ export function AnimeDetails({ anime, anilistAnime, isInDatabase }: AnimeDetails
             <DetailItem label="Format" value={anilistAnime.format} />
             <DetailItem label="Season" value={anilistAnime.season && anilistAnime.seasonYear ? `${anilistAnime.season} ${anilistAnime.seasonYear}` : null} />
             <DetailItem label="Duration" value={anilistAnime.duration ? `${anilistAnime.duration} min` : null} />
-            <DetailItem label="Studio" value={anilistAnime.studios.nodes.find(s => s.isMain)?.name} />
+            <DetailItem label="Studio" value={anilistAnime.studios.nodes[0]?.name} />
           </>
         ) : null}
       </div>

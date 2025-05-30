@@ -1,4 +1,3 @@
-
 export interface AnilistAnime {
   id: number;
   title: {
@@ -18,7 +17,6 @@ export interface AnilistAnime {
   studios: {
     nodes: Array<{
       name: string;
-      isMain: boolean;
     }>;
   };
   startDate: {
@@ -76,7 +74,6 @@ export class AnilistClient {
             studios {
               nodes {
                 name
-                isMain
               }
             }
             startDate {
@@ -111,6 +108,12 @@ export class AnilistClient {
       }
 
       const data = await response.json();
+      
+      if (data.errors) {
+        console.error('GraphQL errors:', data.errors);
+        throw new Error(`GraphQL error: ${data.errors[0]?.message || 'Unknown error'}`);
+      }
+      
       return data.data.Media;
     } catch (error) {
       console.error(`Error fetching anime ${id} from AniList:`, error);
