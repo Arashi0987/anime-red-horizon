@@ -11,49 +11,43 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import { AnimeShowWithSoundtrack } from "@/types/anime";
+import { AnilistAnime } from "@/services/anilistClient";
 import { ApiClient } from "@/services/apiClient";
 import { useToast } from "@/hooks/use-toast";
 
 const WATCH_STATUSES = ['CURRENT', 'PLANNING', 'COMPLETED', 'REPEATING', 'PAUSED'] as const;
 
-interface AnimeProgressProps {
-  anime: AnimeShowWithSoundtrack;
-  onAnimeUpdate: (updatedAnime: AnimeShowWithSoundtrack) => void;
+interface AnilistProgressProps {
+  anilistAnime: AnilistAnime;
 }
 
-export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
+export function AnilistProgress({ anilistAnime }: AnilistProgressProps) {
+  const [progress, setProgress] = useState<number>(0);
+  const [watchStatus, setWatchStatus] = useState<string>('PLANNING');
   const [editingProgress, setEditingProgress] = useState(false);
-  const [tempProgress, setTempProgress] = useState<number>(anime.anilist_progress || 0);
   const [editingStatus, setEditingStatus] = useState(false);
+  const [tempProgress, setTempProgress] = useState<number>(0);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
   const handleProgressSave = async () => {
-    if (tempProgress <= (anime.episodes || 0)) {
+    const maxEpisodes = anilistAnime.episodes || 0;
+    if (tempProgress <= maxEpisodes) {
       setIsUpdating(true);
       try {
-        // Update the database
-        const updatedAnime = await ApiClient.updateAnime(anime.id, {
-          anilist_progress: tempProgress
-        });
-        
-        // Sync with AniList
-        await ApiClient.updateAniList(anime.id, tempProgress);
-        
-        // Update the local state
-        onAnimeUpdate({ ...anime, anilist_progress: tempProgress });
+        await ApiClient.updateAniList(anilistAnime.id, tempProgress);
+        setProgress(tempProgress);
         setEditingProgress(false);
         
         toast({
           title: "Progress Updated",
-          description: `Progress set to ${tempProgress}, saved to database, and synced with AniList`,
+          description: `Progress set to ${tempProgress} and synced with AniList`,
         });
       } catch (error) {
-        console.error('Failed to update progress:', error);
+        console.error('Failed to update AniList progress:', error);
         toast({
           title: "Update Failed",
-          description: "Failed to save progress. Please try again.",
+          description: "Failed to sync progress with AniList. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -71,27 +65,19 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
   const handleStatusChange = async (newStatus: typeof WATCH_STATUSES[number]) => {
     setIsUpdating(true);
     try {
-      // Update the database
-      const updatedAnime = await ApiClient.updateAnime(anime.id, {
-        watch_status: newStatus
-      });
-      
-      // Sync with AniList
-      await ApiClient.updateAniList(anime.id, undefined, newStatus);
-      
-      // Update the local state
-      onAnimeUpdate({ ...anime, watch_status: newStatus });
+      await ApiClient.updateAniList(anilistAnime.id, undefined, newStatus);
+      setWatchStatus(newStatus);
       setEditingStatus(false);
       
       toast({
         title: "Status Updated",
-        description: `Status changed to ${newStatus}, saved to database, and synced with AniList`,
+        description: `Status changed to ${newStatus} and synced with AniList`,
       });
     } catch (error) {
-      console.error('Failed to update status:', error);
+      console.error('Failed to update AniList status:', error);
       toast({
         title: "Update Failed",
-        description: "Failed to save status. Please try again.",
+        description: "Failed to sync status with AniList. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -101,17 +87,17 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Progress & Status</h2>
+      <h2 className="text-xl font-semibold">AniList Progress & Status</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="progress">AniList Progress</Label>
+          <Label htmlFor="anilist-progress">Progress</Label>
           {editingProgress ? (
             <div className="flex gap-2">
               <Input
-                id="progress"
+                id="anilist-progress"
                 type="number"
                 min="0"
-                max={anime.episodes || 0}
+                max={anilistAnime.episodes || 0}
                 value={tempProgress}
                 onChange={(e) => setTempProgress(parseInt(e.target.value) || 0)}
                 className="flex-1"
@@ -127,7 +113,7 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
               <Button 
                 onClick={() => {
                   setEditingProgress(false);
-                  setTempProgress(anime.anilist_progress || 0);
+                  setTempProgress(progress);
                 }} 
                 variant="outline" 
                 size="sm"
@@ -138,9 +124,12 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="font-medium">{anime.anilist_progress || 0} / {anime.episodes || 0}</span>
+              <span className="font-medium">{progress} / {anilistAnime.episodes || 0}</span>
               <Button 
-                onClick={() => setEditingProgress(true)} 
+                onClick={() => {
+                  setEditingProgress(true);
+                  setTempProgress(progress);
+                }} 
                 variant="outline" 
                 size="sm"
                 disabled={isUpdating}
@@ -162,7 +151,7 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
                     className="flex-1 justify-between"
                     disabled={isUpdating}
                   >
-                    {anime.watch_status || "Select Status"}
+                    {watchStatus}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -192,12 +181,12 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
             <div className="flex items-center gap-2">
               <Badge 
                 variant={
-                  anime.watch_status === "COMPLETED" ? "success" :
-                  anime.watch_status === "CURRENT" ? "warning" :
+                  watchStatus === "COMPLETED" ? "success" :
+                  watchStatus === "CURRENT" ? "warning" :
                   "secondary"
                 }
               >
-                {anime.watch_status || "Unknown"}
+                {watchStatus}
               </Badge>
               <Button 
                 onClick={() => setEditingStatus(true)} 
@@ -214,7 +203,7 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
       
       {isUpdating && (
         <div className="text-sm text-muted-foreground">
-          Saving changes to database and syncing with AniList...
+          Syncing changes with AniList...
         </div>
       )}
     </div>

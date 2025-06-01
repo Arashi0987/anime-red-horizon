@@ -1,4 +1,3 @@
-
 import { AnimeShow, SoundtrackInfo } from "@/types/anime";
 
 // Determine the API URL dynamically based on deployment environment
@@ -18,6 +17,7 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
+const ANILIST_UPDATE_URL = "http://panther:5001/update_anilist/";
 
 // Add these constants at the top
 const PLEX_SERVER = 'http://10.69.69.2:32400';
@@ -69,6 +69,30 @@ export class ApiClient {
     }
   }
 
+  // Search anime by name
+  static async searchAnime(query: string): Promise<AnimeShow[]> {
+    if (!query) return this.getAnimeList();
+    
+    try {
+      console.log(`Searching anime with query "${query}" from: ${API_URL}/anime/search/${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_URL}/anime/search/${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to search anime: ${response.status} ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error searching anime:", error);
+      
+      // Return filtered sample data for development/fallback
+      const lowercaseQuery = query.toLowerCase();
+      return this.getSampleAnimeList().filter(
+        anime => 
+          (anime.english_name && anime.english_name.toLowerCase().includes(lowercaseQuery)) || 
+          (anime.romanji_name && anime.romanji_name.toLowerCase().includes(lowercaseQuery))
+      );
+    }
+  }
+
   // Update anime data
   static async updateAnime(id: number, updates: Partial<AnimeShow>): Promise<AnimeShow> {
     try {
@@ -92,27 +116,39 @@ export class ApiClient {
     }
   }
 
-  // Search anime by name
-  static async searchAnime(query: string): Promise<AnimeShow[]> {
-    if (!query) return this.getAnimeList();
-    
+  // New method to update AniList via local API
+  static async updateAniList(mediaId: number, progress?: number, status?: string): Promise<void> {
     try {
-      console.log(`Searching anime with query "${query}" from: ${API_URL}/anime/search/${encodeURIComponent(query)}`);
-      const response = await fetch(`${API_URL}/anime/search/${encodeURIComponent(query)}`);
-      if (!response.ok) {
-        throw new Error(`Failed to search anime: ${response.status} ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error("Error searching anime:", error);
+      const payload: { media_id: number; progress?: number; status?: string } = {
+        media_id: mediaId
+      };
       
-      // Return filtered sample data for development/fallback
-      const lowercaseQuery = query.toLowerCase();
-      return this.getSampleAnimeList().filter(
-        anime => 
-          (anime.english_name && anime.english_name.toLowerCase().includes(lowercaseQuery)) || 
-          (anime.romanji_name && anime.romanji_name.toLowerCase().includes(lowercaseQuery))
-      );
+      if (progress !== undefined) {
+        payload.progress = progress;
+      }
+      
+      if (status !== undefined) {
+        payload.status = status;
+      }
+
+      console.log(`Updating AniList for media ID ${mediaId}:`, payload);
+      
+      const response = await fetch(ANILIST_UPDATE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update AniList: ${response.status} ${response.statusText}`);
+      }
+      
+      console.log(`Successfully updated AniList for media ID ${mediaId}`);
+    } catch (error) {
+      console.error(`Error updating AniList for media ID ${mediaId}:`, error);
+      throw error;
     }
   }
 

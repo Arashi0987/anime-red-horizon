@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { AnimeHeader } from "@/components/AnimeHeader";
 import { AnimeCover } from "@/components/AnimeCover";
 import { AnimeProgress } from "@/components/AnimeProgress";
+import { AnilistProgress } from "@/components/AnilistProgress";
 import { AnimeDetails } from "@/components/AnimeDetails";
 import { AnimeSoundtrack } from "@/components/AnimeSoundtrack";
 import { AnimeFileSystem } from "@/components/AnimeFileSystem";
@@ -190,12 +191,12 @@ const AnimeDetail = () => {
               </>
             )}
 
-            {/* Progress and Status Section - Only for database anime */}
-            {isInDatabase && anime && (
-              <>
-                <Separator className="bg-anime-gray/50" />
-                <AnimeProgress anime={anime} onAnimeUpdate={handleAnimeUpdate} />
-              </>
+            {/* Progress and Status Section */}
+            <Separator className="bg-anime-gray/50" />
+            {isInDatabase && anime ? (
+              <AnimeProgress anime={anime} onAnimeUpdate={handleAnimeUpdate} />
+            ) : (
+              <AnilistProgress anilistAnime={anilistAnime} />
             )}
 
             <Separator className="bg-anime-gray/50" />
