@@ -38,7 +38,9 @@ const getCurrentSeason = () => {
 const Browse = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [trendingAnime, setTrendingAnime] = useState<TrendingAnime[]>([]);
+  const [searchResults, setSearchResults] = useState<TrendingAnime[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(getCurrentSeason());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -99,6 +101,70 @@ const Browse = () => {
     }
   };
 
+  const searchAnilist = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      
+      const graphqlQuery = `
+        query ($search: String) {
+          Page(page: 1, perPage: 20) {
+            media(search: $search, type: ANIME, isAdult: false) {
+              id
+              title {
+                english
+                romaji
+              }
+              coverImage {
+                large
+              }
+              averageScore
+              seasonYear
+              season
+              episodes
+              status
+              genres
+              description(asHtml: false)
+            }
+          }
+        }
+      `;
+
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ 
+          query: graphqlQuery,
+          variables: { search: query }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to search anime: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.data.Page.media);
+    } catch (error) {
+      console.error("Error searching anime:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    searchAnilist(query);
+  };
+
   useEffect(() => {
     fetchTrendingAnime(selectedSeason, selectedYear);
   }, [selectedSeason, selectedYear]);
@@ -113,56 +179,63 @@ const Browse = () => {
     return cleanDescription.substr(0, maxLength) + "...";
   };
 
+  const displayedAnime = searchQuery.trim() ? searchResults : trendingAnime;
+  const currentlyLoading = searchQuery.trim() ? isSearching : isLoading;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Navbar onSearch={setSearchQuery} searchQuery={searchQuery} />
+      <Navbar onSearch={handleSearch} searchQuery={searchQuery} />
       
       <main className="flex-1 container py-8">
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold tracking-tight">Browse Trending Anime</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {searchQuery.trim() ? `Search Results for "${searchQuery}"` : 'Browse Trending Anime'}
+            </h1>
           </div>
           
-          {/* Season and Year Selector */}
-          <div className="flex gap-4 items-center">
-            <div className="flex gap-2">
-              {SEASONS.map((season) => (
-                <Button
-                  key={season}
-                  variant={selectedSeason === season ? "default" : "outline"}
-                  onClick={() => setSelectedSeason(season)}
-                  size="sm"
-                >
-                  {season}
-                </Button>
-              ))}
+          {/* Season and Year Selector - only show when not searching */}
+          {!searchQuery.trim() && (
+            <div className="flex gap-4 items-center">
+              <div className="flex gap-2">
+                {SEASONS.map((season) => (
+                  <Button
+                    key={season}
+                    variant={selectedSeason === season ? "default" : "outline"}
+                    onClick={() => setSelectedSeason(season)}
+                    size="sm"
+                  >
+                    {season}
+                  </Button>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                {[selectedYear - 1, selectedYear, selectedYear + 1].map((year) => (
+                  <Button
+                    key={year}
+                    variant={selectedYear === year ? "default" : "outline"}
+                    onClick={() => setSelectedYear(year)}
+                    size="sm"
+                  >
+                    {year}
+                  </Button>
+                ))}
+              </div>
             </div>
-            
-            <div className="flex gap-2">
-              {[selectedYear - 1, selectedYear, selectedYear + 1].map((year) => (
-                <Button
-                  key={year}
-                  variant={selectedYear === year ? "default" : "outline"}
-                  onClick={() => setSelectedYear(year)}
-                  size="sm"
-                >
-                  {year}
-                </Button>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Loading State */}
-          {isLoading && (
+          {currentlyLoading && (
             <div className="flex justify-center py-12">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
 
-          {/* Trending Anime Grid */}
-          {!isLoading && (
+          {/* Anime Grid */}
+          {!currentlyLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {trendingAnime.map((anime) => (
+              {displayedAnime.map((anime) => (
                 <Card key={anime.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-[3/4] relative overflow-hidden">
                     <img
@@ -187,7 +260,7 @@ const Browse = () => {
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
-                      {anime.season} {anime.seasonYear}
+                      {anime.season && anime.seasonYear ? `${anime.season} ${anime.seasonYear}` : 'Unknown'}
                       {anime.episodes && <span>• {anime.episodes} eps</span>}
                     </div>
                   </CardHeader>
@@ -223,9 +296,14 @@ const Browse = () => {
             </div>
           )}
           
-          {!isLoading && trendingAnime.length === 0 && (
+          {!currentlyLoading && displayedAnime.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No trending anime found for {selectedSeason} {selectedYear}</p>
+              <p className="text-muted-foreground">
+                {searchQuery.trim() 
+                  ? `No anime found for "${searchQuery}"`
+                  : `No trending anime found for ${selectedSeason} ${selectedYear}`
+                }
+              </p>
             </div>
           )}
         </div>

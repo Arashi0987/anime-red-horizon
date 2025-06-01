@@ -32,6 +32,7 @@ export function SortControls({
           <SelectItem value="id">Anilist ID</SelectItem>
           <SelectItem value="english_name">English Name</SelectItem>
           <SelectItem value="romanji_name">Romanji Name</SelectItem>
+          <SelectItem value="anilist_score">Score</SelectItem>
         </SelectContent>
       </Select>
       

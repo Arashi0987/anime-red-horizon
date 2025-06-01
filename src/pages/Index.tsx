@@ -11,14 +11,32 @@ import { SortField, SortDirection, sortAnimeList } from "@/utils/sorting";
 
 const WATCH_STATUSES = ['ALL', 'CURRENT', 'PLANNING', 'COMPLETED', 'REPEATING', 'PAUSED'] as const;
 
+// Keys for localStorage
+const STORAGE_KEYS = {
+  SORT_FIELD: 'anime_sort_field',
+  SORT_DIRECTION: 'anime_sort_direction',
+  ACTIVE_TAB: 'anime_active_tab',
+  SEARCH_QUERY: 'anime_search_query'
+};
+
 const Index = () => {
   const [animeList, setAnimeList] = useState<AnimeShow[]>([]);
   const [filteredAnimeList, setFilteredAnimeList] = useState<AnimeShow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState<SortField>("id");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [activeTab, setActiveTab] = useState<typeof WATCH_STATUSES[number]>("ALL");
+  
+  // Load state from localStorage with fallbacks
+  const [searchQuery, setSearchQuery] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.SEARCH_QUERY) || ""
+  );
+  const [sortField, setSortField] = useState<SortField>(() => 
+    (localStorage.getItem(STORAGE_KEYS.SORT_FIELD) as SortField) || "id"
+  );
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => 
+    (localStorage.getItem(STORAGE_KEYS.SORT_DIRECTION) as SortDirection) || "asc"
+  );
+  const [activeTab, setActiveTab] = useState<typeof WATCH_STATUSES[number]>(() => 
+    (localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) as typeof WATCH_STATUSES[number]) || "ALL"
+  );
 
   useEffect(() => {
     const fetchAnimeList = async () => {
@@ -63,17 +81,36 @@ const Index = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    localStorage.setItem(STORAGE_KEYS.SEARCH_QUERY, query);
     filterAndSortAnime(query, activeTab);
   };
 
   const handleTabChange = (status: typeof WATCH_STATUSES[number]) => {
     setActiveTab(status);
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, status);
     filterAndSortAnime(searchQuery, status);
+  };
+
+  const handleSortFieldChange = (field: SortField) => {
+    setSortField(field);
+    localStorage.setItem(STORAGE_KEYS.SORT_FIELD, field);
+  };
+
+  const handleSortDirectionChange = (direction: SortDirection) => {
+    setSortDirection(direction);
+    localStorage.setItem(STORAGE_KEYS.SORT_DIRECTION, direction);
   };
 
   useEffect(() => {
     filterAndSortAnime(searchQuery, activeTab);
-  }, [sortField, sortDirection]);
+  }, [sortField, sortDirection, animeList]);
+
+  // Apply initial filter when component mounts
+  useEffect(() => {
+    if (animeList.length > 0) {
+      filterAndSortAnime(searchQuery, activeTab);
+    }
+  }, [animeList]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -86,13 +123,13 @@ const Index = () => {
               <SortControls
                 sortField={sortField}
                 sortDirection={sortDirection}
-                onSortFieldChange={setSortField}
-                onSortDirectionChange={setSortDirection}
+                onSortFieldChange={handleSortFieldChange}
+                onSortDirectionChange={handleSortDirectionChange}
               />
             </div>
           </div>
 
-          <Tabs defaultValue="ALL" className="w-full">
+          <Tabs value={activeTab} className="w-full">
             <TabsList>
               {WATCH_STATUSES.map((status) => (
                 <TabsTrigger
