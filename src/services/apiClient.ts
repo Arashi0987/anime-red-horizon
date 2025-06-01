@@ -1,3 +1,4 @@
+
 import { AnimeShow, SoundtrackInfo } from "@/types/anime";
 
 // Determine the API URL dynamically based on deployment environment
@@ -65,6 +66,29 @@ export class ApiClient {
       
       // Return sample data for development/fallback
       return this.getSampleAnimeList().find(anime => anime.id === id);
+    }
+  }
+
+  // Update anime data
+  static async updateAnime(id: number, updates: Partial<AnimeShow>): Promise<AnimeShow> {
+    try {
+      console.log(`Updating anime with ID ${id}:`, updates);
+      const response = await fetch(`${API_URL}/anime/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update anime with ID ${id}: ${response.status} ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating anime with ID ${id}:`, error);
+      throw error;
     }
   }
 

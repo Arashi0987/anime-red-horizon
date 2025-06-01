@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { AnimeShowWithSoundtrack } from "@/types/anime";
+import { ApiClient } from "@/services/apiClient";
 import { useToast } from "@/hooks/use-toast";
 
 const WATCH_STATUSES = ['CURRENT', 'PLANNING', 'COMPLETED', 'REPEATING', 'PAUSED'] as const;
@@ -25,17 +26,36 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
   const [editingProgress, setEditingProgress] = useState(false);
   const [tempProgress, setTempProgress] = useState<number>(anime.anilist_progress || 0);
   const [editingStatus, setEditingStatus] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  const handleProgressSave = () => {
+  const handleProgressSave = async () => {
     if (tempProgress <= (anime.episodes || 0)) {
-      const updatedAnime = { ...anime, anilist_progress: tempProgress };
-      onAnimeUpdate(updatedAnime);
-      setEditingProgress(false);
-      toast({
-        title: "Progress Updated",
-        description: `Progress set to ${tempProgress}`,
-      });
+      setIsUpdating(true);
+      try {
+        // Update the database
+        const updatedAnime = await ApiClient.updateAnime(anime.id, {
+          anilist_progress: tempProgress
+        });
+        
+        // Update the local state
+        onAnimeUpdate({ ...anime, anilist_progress: tempProgress });
+        setEditingProgress(false);
+        
+        toast({
+          title: "Progress Updated",
+          description: `Progress set to ${tempProgress} and saved to database`,
+        });
+      } catch (error) {
+        console.error('Failed to update progress:', error);
+        toast({
+          title: "Update Failed",
+          description: "Failed to save progress to database. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUpdating(false);
+      }
     } else {
       toast({
         title: "Invalid Progress",
@@ -45,14 +65,32 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
     }
   };
 
-  const handleStatusChange = (newStatus: typeof WATCH_STATUSES[number]) => {
-    const updatedAnime = { ...anime, watch_status: newStatus };
-    onAnimeUpdate(updatedAnime);
-    setEditingStatus(false);
-    toast({
-      title: "Status Updated",
-      description: `Status changed to ${newStatus}`,
-    });
+  const handleStatusChange = async (newStatus: typeof WATCH_STATUSES[number]) => {
+    setIsUpdating(true);
+    try {
+      // Update the database
+      const updatedAnime = await ApiClient.updateAnime(anime.id, {
+        watch_status: newStatus
+      });
+      
+      // Update the local state
+      onAnimeUpdate({ ...anime, watch_status: newStatus });
+      setEditingStatus(false);
+      
+      toast({
+        title: "Status Updated",
+        description: `Status changed to ${newStatus} and saved to database`,
+      });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to save status to database. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -71,8 +109,15 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
                 value={tempProgress}
                 onChange={(e) => setTempProgress(parseInt(e.target.value) || 0)}
                 className="flex-1"
+                disabled={isUpdating}
               />
-              <Button onClick={handleProgressSave} size="sm">Save</Button>
+              <Button 
+                onClick={handleProgressSave} 
+                size="sm"
+                disabled={isUpdating}
+              >
+                {isUpdating ? "Saving..." : "Save"}
+              </Button>
               <Button 
                 onClick={() => {
                   setEditingProgress(false);
@@ -80,6 +125,7 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
                 }} 
                 variant="outline" 
                 size="sm"
+                disabled={isUpdating}
               >
                 Cancel
               </Button>
@@ -87,7 +133,12 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
           ) : (
             <div className="flex items-center gap-2">
               <span className="font-medium">{anime.anilist_progress || 0} / {anime.episodes || 0}</span>
-              <Button onClick={() => setEditingProgress(true)} variant="outline" size="sm">
+              <Button 
+                onClick={() => setEditingProgress(true)} 
+                variant="outline" 
+                size="sm"
+                disabled={isUpdating}
+              >
                 Edit
               </Button>
             </div>
@@ -100,7 +151,11 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
             <div className="flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex-1 justify-between">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 justify-between"
+                    disabled={isUpdating}
+                  >
                     {anime.watch_status || "Select Status"}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -111,13 +166,19 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
                       key={status} 
                       onClick={() => handleStatusChange(status)}
                       className="cursor-pointer"
+                      disabled={isUpdating}
                     >
                       {status}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button onClick={() => setEditingStatus(false)} variant="outline" size="sm">
+              <Button 
+                onClick={() => setEditingStatus(false)} 
+                variant="outline" 
+                size="sm"
+                disabled={isUpdating}
+              >
                 Cancel
               </Button>
             </div>
@@ -132,13 +193,24 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
               >
                 {anime.watch_status || "Unknown"}
               </Badge>
-              <Button onClick={() => setEditingStatus(true)} variant="outline" size="sm">
+              <Button 
+                onClick={() => setEditingStatus(true)} 
+                variant="outline" 
+                size="sm"
+                disabled={isUpdating}
+              >
                 Edit
               </Button>
             </div>
           )}
         </div>
       </div>
+      
+      {isUpdating && (
+        <div className="text-sm text-muted-foreground">
+          Saving changes to database...
+        </div>
+      )}
     </div>
   );
 }
