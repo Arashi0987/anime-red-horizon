@@ -95,9 +95,12 @@ export class ApiClient {
 
   // Update anime data
   static async updateAnime(id: number, updates: Partial<AnimeShow>): Promise<AnimeShow> {
+    const updateUrl = `${API_URL}/anime/${id}`;
+    console.log(`[ApiClient] Attempting to update anime with ID ${id} at URL: ${updateUrl}`);
+    console.log(`[ApiClient] Update payload:`, updates);
+    
     try {
-      console.log(`Updating anime with ID ${id}:`, updates);
-      const response = await fetch(`${API_URL}/anime/${id}`, {
+      const response = await fetch(updateUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -105,19 +108,33 @@ export class ApiClient {
         body: JSON.stringify(updates),
       });
       
+      console.log(`[ApiClient] Response status: ${response.status} ${response.statusText}`);
+      console.log(`[ApiClient] Response headers:`, Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error(`Failed to update anime with ID ${id}: ${response.status} ${response.statusText}`);
+        const responseText = await response.text();
+        console.error(`[ApiClient] Response body:`, responseText);
+        throw new Error(`Failed to update anime with ID ${id}: ${response.status} ${response.statusText}. Response: ${responseText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log(`[ApiClient] Update successful for anime ID ${id}:`, result);
+      return result;
     } catch (error) {
-      console.error(`Error updating anime with ID ${id}:`, error);
+      console.error(`[ApiClient] Error updating anime with ID ${id}:`, error);
+      console.error(`[ApiClient] API_URL:`, API_URL);
+      console.error(`[ApiClient] Full URL:`, updateUrl);
+      console.error(`[ApiClient] Error type:`, error?.constructor?.name);
+      console.error(`[ApiClient] Error message:`, error?.message);
       throw error;
     }
   }
 
   // New method to update AniList via local API
   static async updateAniList(mediaId: number, progress?: number, status?: string): Promise<void> {
+    console.log(`[ApiClient] Starting AniList update for media ID ${mediaId}`);
+    console.log(`[ApiClient] AniList update URL: ${ANILIST_UPDATE_URL}`);
+    
     try {
       const payload: { media_id: number; progress?: number; status?: string } = {
         media_id: mediaId
@@ -131,7 +148,7 @@ export class ApiClient {
         payload.status = status;
       }
 
-      console.log(`Updating AniList for media ID ${mediaId}:`, payload);
+      console.log(`[ApiClient] AniList update payload:`, payload);
       
       const response = await fetch(ANILIST_UPDATE_URL, {
         method: 'POST',
@@ -141,13 +158,22 @@ export class ApiClient {
         body: JSON.stringify(payload),
       });
       
+      console.log(`[ApiClient] AniList response status: ${response.status} ${response.statusText}`);
+      console.log(`[ApiClient] AniList response headers:`, Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error(`Failed to update AniList: ${response.status} ${response.statusText}`);
+        const responseText = await response.text();
+        console.error(`[ApiClient] AniList response body:`, responseText);
+        throw new Error(`Failed to update AniList: ${response.status} ${response.statusText}. Response: ${responseText}`);
       }
       
-      console.log(`Successfully updated AniList for media ID ${mediaId}`);
+      const responseText = await response.text();
+      console.log(`[ApiClient] AniList update successful for media ID ${mediaId}. Response:`, responseText);
     } catch (error) {
-      console.error(`Error updating AniList for media ID ${mediaId}:`, error);
+      console.error(`[ApiClient] Error updating AniList for media ID ${mediaId}:`, error);
+      console.error(`[ApiClient] AniList URL:`, ANILIST_UPDATE_URL);
+      console.error(`[ApiClient] Error type:`, error?.constructor?.name);
+      console.error(`[ApiClient] Error message:`, error?.message);
       throw error;
     }
   }

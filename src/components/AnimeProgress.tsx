@@ -30,16 +30,21 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
   const { toast } = useToast();
 
   const handleProgressSave = async () => {
+    console.log(`[AnimeProgress] Starting progress update for anime ID ${anime.id} from ${anime.anilist_progress || 0} to ${tempProgress}`);
     if (tempProgress <= (anime.episodes || 0)) {
       setIsUpdating(true);
       try {
         // Update the database
+        console.log(`[AnimeProgress] Updating database for anime ID ${anime.id} with progress: ${tempProgress}`);
         const updatedAnime = await ApiClient.updateAnime(anime.id, {
           anilist_progress: tempProgress
         });
+        console.log(`[AnimeProgress] Database update successful for anime ID ${anime.id}:`, updatedAnime);
         
         // Sync with AniList
+        console.log(`[AnimeProgress] Syncing with AniList for anime ID ${anime.id} with progress: ${tempProgress}`);
         await ApiClient.updateAniList(anime.id, tempProgress);
+        console.log(`[AnimeProgress] AniList sync successful for anime ID ${anime.id}`);
         
         // Update the local state
         onAnimeUpdate({ ...anime, anilist_progress: tempProgress });
@@ -49,17 +54,24 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
           title: "Progress Updated",
           description: `Progress set to ${tempProgress}, saved to database, and synced with AniList`,
         });
+        console.log(`[AnimeProgress] Complete progress update successful for anime ID ${anime.id}`);
       } catch (error) {
-        console.error('Failed to update progress:', error);
+        console.error(`[AnimeProgress] Failed to update progress for anime ID ${anime.id}:`, error);
+        console.error(`[AnimeProgress] Error details:`, {
+          name: error?.name,
+          message: error?.message,
+          stack: error?.stack
+        });
         toast({
           title: "Update Failed",
-          description: "Failed to save progress. Please try again.",
+          description: `Failed to save progress. Please try again. Error: ${error?.message || 'Unknown error'}`,
           variant: "destructive",
         });
       } finally {
         setIsUpdating(false);
       }
     } else {
+      console.warn(`[AnimeProgress] Invalid progress value: ${tempProgress} > ${anime.episodes || 0} episodes`);
       toast({
         title: "Invalid Progress",
         description: "Progress cannot exceed total episodes",
@@ -69,15 +81,20 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
   };
 
   const handleStatusChange = async (newStatus: typeof WATCH_STATUSES[number]) => {
+    console.log(`[AnimeProgress] Starting status update for anime ID ${anime.id} from "${anime.watch_status}" to "${newStatus}"`);
     setIsUpdating(true);
     try {
       // Update the database
+      console.log(`[AnimeProgress] Updating database for anime ID ${anime.id} with status: ${newStatus}`);
       const updatedAnime = await ApiClient.updateAnime(anime.id, {
         watch_status: newStatus
       });
+      console.log(`[AnimeProgress] Database update successful for anime ID ${anime.id}:`, updatedAnime);
       
       // Sync with AniList
+      console.log(`[AnimeProgress] Syncing with AniList for anime ID ${anime.id} with status: ${newStatus}`);
       await ApiClient.updateAniList(anime.id, undefined, newStatus);
+      console.log(`[AnimeProgress] AniList sync successful for anime ID ${anime.id}`);
       
       // Update the local state
       onAnimeUpdate({ ...anime, watch_status: newStatus });
@@ -87,11 +104,17 @@ export function AnimeProgress({ anime, onAnimeUpdate }: AnimeProgressProps) {
         title: "Status Updated",
         description: `Status changed to ${newStatus}, saved to database, and synced with AniList`,
       });
+      console.log(`[AnimeProgress] Complete status update successful for anime ID ${anime.id}`);
     } catch (error) {
-      console.error('Failed to update status:', error);
+      console.error(`[AnimeProgress] Failed to update status for anime ID ${anime.id}:`, error);
+      console.error(`[AnimeProgress] Error details:`, {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack
+      });
       toast({
         title: "Update Failed",
-        description: "Failed to save status. Please try again.",
+        description: `Failed to save status. Please try again. Error: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
